@@ -22,7 +22,8 @@ var VueReactivity = (() => {
   __export(src_exports, {
     computed: () => computed,
     effect: () => effect,
-    reactive: () => reactive
+    reactive: () => reactive,
+    watch: () => watch
   });
 
   // packages/reactivity/src/effect.ts
@@ -122,7 +123,28 @@ var VueReactivity = (() => {
     return typeof value === "function";
   };
 
+  // packages/reactivity/src/reactive.ts
+  var reactiveMap = /* @__PURE__ */ new WeakMap();
+  function reactive(target) {
+    if (!isObject(target)) {
+      return target;
+    }
+    if (target["_v_isReactive" /* IS_REACTIVE */]) {
+      return target;
+    }
+    const existing = reactiveMap.get(target);
+    if (existing) {
+      return existing;
+    }
+    const proxy = new Proxy(target, baseHandler);
+    reactiveMap.set(target, proxy);
+    return proxy;
+  }
+
   // packages/reactivity/src/baseHandler.ts
+  function isReactive(value) {
+    return value && value["_v_isReactive" /* IS_REACTIVE */];
+  }
   var baseHandler = {
     get(target, key, receiver) {
       if (key === "_v_isReactive" /* IS_REACTIVE */) {
@@ -146,22 +168,35 @@ var VueReactivity = (() => {
     }
   };
 
-  // packages/reactivity/src/reactive.ts
-  var reactiveMap = /* @__PURE__ */ new WeakMap();
-  function reactive(target) {
-    if (!isObject(target)) {
-      return target;
+  // packages/reactivity/src/watch.ts
+  function traversal(value, set = /* @__PURE__ */ new Set()) {
+    if (!isObject(value)) {
+      return value;
     }
-    if (target["_v_isReactive" /* IS_REACTIVE */]) {
-      return target;
+    if (set.has(value)) {
+      return value;
     }
-    const existing = reactiveMap.get(target);
-    if (existing) {
-      return existing;
+    set.add(value);
+    for (let key in value) {
+      traversal(value[key], set);
     }
-    const proxy = new Proxy(target, baseHandler);
-    reactiveMap.set(target, proxy);
-    return proxy;
+    return value;
+  }
+  function watch(source, cb) {
+    let get;
+    if (isReactive(source)) {
+      console.log("\u662F\u54CD\u5E94\u5F0F\u5BF9\u8C61");
+      get = () => traversal(source);
+    } else if (isFunction(source)) {
+      get = source;
+    }
+    let oldValue;
+    const job = () => {
+      let newValue = effect3.run();
+      cb(newValue, oldValue);
+    };
+    const effect3 = new ReactiveEffect(get, job);
+    oldValue = effect3.run();
   }
 
   // packages/reactivity/src/computed.ts
