@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- <script src="../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
+    <div id="app"></div>
+    <script>
+        const {effect,reactive,computed} = VueReactivity
+        const obj = {firstName:'xiaowang',lastName:'23'}
+        const state = reactive(obj)
+        // let fullName = computed(()=>{
+        //     console.log('runner')
+        //     return state.firstName + state.lastName
+        // })
+        debugger 
+        let fullName = computed({
+            get(){
+                return state.firstName + state.lastName
+            },
+            set(value){
+                state.lastName = value
+            }
+        })
+        console.log(fullName)
+        fullName.value = 100
+
+        effect(()=>{
+            app.innerHTML = fullName.value
+        })
+        setTimeout(()=>{
+            state.firstName = 'x'
+        },1000)
+       // 装箱 
+        // 计算属性 就是一个effect 当我取值的时候 会访问firstName ，lastName。firstName ，lastName 会收集计算属性的computer
+        // 计算属性也可以收集effect
+    </script>
+</body>
+</html>

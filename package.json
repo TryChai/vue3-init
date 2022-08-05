@@ -1,0 +1,19 @@
+{
+  "name": "vue-init",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node script/dev.js "
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "vue": "^3.2.37"
+  },
+  "devDependencies": {
+    "esbuild": "^0.14.51",
+    "minimist": "^1.2.6",
+    "typescript": "^4.7.4"
+  }
+}
