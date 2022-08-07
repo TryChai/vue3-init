@@ -18,6 +18,7 @@ class ComputedRefImpl{
     private _dirty = true
     public effect
     public deps
+    private _v_isRef = true
     constructor(getter,public setter){
         // 拿到effect实例 让函数执行
        this.effect = new ReactiveEffect(getter,()=>{

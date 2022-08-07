@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- <script src="../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
+    <div id="app"></div>
+    <script>
+        // watch 虽然是一个compositionApi 但是没有放入响应式模块上
+        const {effect,reactive,computed,watch,ref,toRef,toRefs,proxyRefs} = VueReactivity
+        const obj = {name:'xiaowang',age:'23'}
+        const state = reactive(obj)
+        let {name,age} = toRefs(state)
+        let my = proxyRefs({
+            name,age
+        })
+        // let name = toRef(state,'name')
+        // let age = toRef(state,'age')
+        effect(()=>{
+         app.innerHTML = my.name + my.age 
+        })
+        setTimeout(()=>{
+            my.age = 100
+        },1000)
+        // reactive 适合对象 非对象不能使用，不是对象 不能被代理
+        // reactive(readonly,shallowReadonly,shallowReactive)
+
+        //非对象类型的 ref 
+        // 将属性从对象中结构 toRef,toRefs 
+        // proxyRefs 将ref的类型包装到一个新的对象 
+        //ref 放到reactive会自动结构（这里面还有数组的情况）
+
+        // computed,watch 都是基于effect 
+        // compute 中是具备缓存的 watch 是数据变化了出发了内部的scheduler 
+        // compute 也是ref 可以用在模板上 ，watch不能用在模板上，只能再业务逻辑中使用 onCleanup
+
+       
+    </script>
+</body>
+</html>
