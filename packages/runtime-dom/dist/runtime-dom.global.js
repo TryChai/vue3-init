@@ -34,13 +34,17 @@ var VueRuntimeDOM = (() => {
   // packages/runtime-dom/src/index.ts
   var src_exports = {};
   __export(src_exports, {
+    Text: () => Text,
     computed: () => computed,
+    createRenderer: () => createRenderer,
     createVNode: () => createVNode,
     effect: () => effect,
     h: () => h,
+    isVnode: () => isVnode,
     proxyRefs: () => proxyRefs,
     reactive: () => reactive,
     ref: () => ref,
+    render: () => render,
     shapeFlags: () => shapeFlags,
     toReactive: () => toReactive,
     toRef: () => toRef,
@@ -165,12 +169,20 @@ var VueRuntimeDOM = (() => {
     return typeof value === "string";
   };
   var isArray = Array.isArray;
+  var isNumber = (value) => {
+    return typeof value === "number";
+  };
 
   // packages/runtime-core/src/createVNode.ts
+  var Text = Symbol("Text");
+  function isVnode(val) {
+    return val.__v_isVNode;
+  }
   function createVNode(type, props = null, children = null) {
     console.log(type, props, children);
     let shapFlag = isString(type) ? shapeFlags.ELEMENT : 0;
     const vnode = {
+      __v_isVNode: true,
       type,
       props,
       children,
@@ -477,14 +489,89 @@ var VueRuntimeDOM = (() => {
   };
 
   // packages/runtime-core/src/h.ts
-  function h() {
+  function h(type, propOrChildren, children) {
+    const l = arguments.length;
+    if (l == 2) {
+      if (isObject(propOrChildren) && !isArray(propOrChildren)) {
+        if (isVnode(propOrChildren)) {
+          return createVNode(type, null, [propOrChildren]);
+        }
+        return createVNode(type, propOrChildren);
+      } else {
+        return createVNode(type, null, propOrChildren);
+      }
+    } else {
+      if (l == 3 && isVnode(children)) {
+        children = [children];
+      } else if (l > 3) {
+        children = Array.from(arguments).slice(2);
+      }
+      return createVNode(type, propOrChildren, children);
+    }
+  }
+
+  // packages/runtime-core/src/renderer.ts
+  function createRenderer(options) {
+    let {
+      createElement: hostCreateElement,
+      createTextNode: hostCreateTextNode,
+      insert: hostInsert,
+      remove: hostRemove,
+      querySelector: hostQuerySelector,
+      parentNode: hostParentNode,
+      nextSibling: hostNextSibling,
+      setText: hostSetText,
+      setElementText: hostSetElementText,
+      patchProp: hostPatchProp
+    } = options;
+    function normalize(children, i) {
+      if (isString(children[i]) && isNumber(children[i])) {
+        children[i] = createVNode(Text, null, children[i]);
+      }
+      return children[i];
+    }
+    function mountChildren(children, container) {
+      for (let i = 0; i < children.length; i++) {
+        let child = normalize(children, i);
+        patch(null, child, container);
+      }
+    }
+    function mountElement(vnode, dom) {
+      let { type, props, children, shapFlag } = vnode;
+      let el = vnode.el = hostCreateElement(type);
+      if (shapFlag & 8 /* TEXT_CHILDREN */) {
+        hostSetElementText(el, children);
+      }
+      if (shapFlag & 16 /* ARRAY_CHILDREN */) {
+        mountChildren(children, el);
+      }
+      hostInsert(el, dom);
+    }
+    function patch(preVnode, vnode, dom) {
+      if (preVnode == null) {
+        mountElement(vnode, dom);
+      }
+    }
+    function render2(vnode, container) {
+      console.log(vnode, container);
+      if (vnode == null) {
+      } else {
+        patch(container._vnode || null, vnode, container);
+      }
+    }
+    return {
+      render: render2
+    };
   }
 
   // packages/runtime-dom/src/index.ts
   var renderOptions = __spreadValues({
     patchProp
   }, nodeOps);
-  console.log(renderOptions);
+  function render(vnode, container) {
+    let { render: render2 } = createRenderer(renderOptions);
+    render2(vnode, container);
+  }
   return __toCommonJS(src_exports);
 })();
 //# sourceMappingURL=runtime-dom.global.js.map

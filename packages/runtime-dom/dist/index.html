@@ -11,7 +11,8 @@
     <script src="./runtime-dom.global.js"></script>
     <script>
         const {h,createVNode} = VueRuntimeDOM
-        createVNode('h1',{},['hello ','world'])
+        h('h1',h('span','hello word'))
+        // createVNode('h1',{},['hello ','world'])
         // 可以方便用户自己渲染
         // const {createRender,h} = VueRuntimeDOM
         // const {render,createApp} = createRender({
