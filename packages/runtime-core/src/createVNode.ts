@@ -5,9 +5,10 @@ export const Text = Symbol('Text')
 export function isVnode(val){
     return val.__v_isVNode
 }
+export function isSameVNode(v1,v2){
+    return v1.type === v2.type && v1.key == v2.key
+}
 export function createVNode(type,props=null,children=null){
-    console.log(type,props,children)
-
     let shapFlag = isString(type) ? shapeFlags.ELEMENT : 0
     //将当前节点跟儿子做映射 权限组合 位运算
     const vnode = { // vnode 要对应真实的节点 
@@ -30,7 +31,6 @@ export function createVNode(type,props=null,children=null){
         } 
         vnode.shapFlag |= temp
     }
-    console.log(vnode)
     // shapeFlags 我想知道这个虚拟节点的儿子是数组还是元素 还是文本
     return vnode
 }

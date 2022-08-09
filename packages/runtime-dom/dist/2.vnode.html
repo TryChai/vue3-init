@@ -12,7 +12,27 @@
     <script>
         const {createRenderer,h,createVNode,render} = VueRuntimeDOM
         // render(h('h1',h('span','hello world')),app)
-        render(h('h1',[123,456]),app)
+        // render(h('h1',{a:1,b:2,style:{color:'red'},onClick:()=>alert(1)},[123,456]),app)
+        // diff 算法才用同级比对
+        // render(h('h1',{style:{color:'red'}},'hello world'),app)
+        // setTimeout(()=>{
+        //     render(h('h1',{style:{color:'yellow'}},'hello world'),app)
+        // },1000)
+        // setTimeout(()=>{
+        //     render(null,app)
+        // },2000)
+        //情况1
+        render(h('div',{style:{color:'red'}},[
+            h('p',{key:'a1',style:{color:'red'}},'hello'),
+            h('p',{key:'a2',style:{color:'yellow'}},'hello'),
+            h('p',{key:'a3',style:{color:'blue'}},'hello'),
+        ]),app)
+        setTimeout(()=>{
+            render(h('div',{style:{color:'red'}},[
+                h('p',{key:'a1',style:{color:'pink'}},'hello'),
+                h('p',{key:'a2',style:{color:'red'}},'hello'),
+            ]),app)
+        },1000)
     </script>
 </body>
 </html>
