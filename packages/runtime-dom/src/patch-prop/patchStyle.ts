@@ -1,4 +1,6 @@
 export function patchStyle(el,preValue,nextValue){
+    preValue = preValue ? preValue : {}
+    nextValue = nextValue ? nextValue : {}
     // 比对 两个对象 需要同时遍历 新的和老的
     const style = el.style
     for(let key in nextValue){

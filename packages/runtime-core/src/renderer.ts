@@ -47,7 +47,7 @@ export function createRenderer(options){
             }
         }
     }
-    function mountElement(vnode,dom){
+    function mountElement(vnode,dom,anchor){
         let {type,props,children,shapFlag} = vnode
         let el = vnode.el = hostCreateElement(type)
 
@@ -62,7 +62,7 @@ export function createRenderer(options){
         if(shapFlag & shapeFlags.ARRAY_CHILDREN){
             mountChildren(children,el)
         }
-        hostInsert(el,dom)
+        hostInsert(el,dom,anchor)
     }
     function processText(preVnode,vnode,dom){
         if(preVnode == null){
@@ -82,7 +82,10 @@ export function createRenderer(options){
         let e1 = c1.length - 1
         let e2 = c2.length -1
 
-        while(i <=e1 && i< e2){
+
+        //sync form start
+        // 从前往后比
+        while(i <=e1 && i<= e2){
             const n1 = c1[i]
             const n2 = c2[i]
             if(isSameVNode(n1,n2)){
@@ -92,12 +95,92 @@ export function createRenderer(options){
             }
             i++
         }
-        console.log(i,e1,e2)
+        // console.log(i,e1,e2)
+        // 从后往前比
+        while(i <=e1 && i<= e2){
+            const n1 = c1[e1]
+            const n2 = c2[e2]
+            if(isSameVNode(n1,n2)){
+                patch(n1,n2,el)
+            }else{
+                break
+            }
+            e1--
+            e2--
+        }
+        
+        // 向后追加 向前追加  前删除 后删除
+        if(i>e1){
+            if(i<=e2){
+                //往后追加的情况
+                while(i<=e2){
+                    //判断e2 是不是末尾项
+                    const nextPos = e2+1
+                    // 看一下下一项是否在数组内 说明有参照物 
+                    let anchor = c2.length <= nextPos ? null : c2[nextPos].el
+                   // 如果anchor有值  向前插入 如果没值就是往后追加
+                    patch(null,c2[i],el,anchor)
+                    i++
+
+                }
+            }
+        }else if(i>e2){ //老的多 新的少
+            if(i<=e1){
+                while(i<=e1){
+                    unmount(c1[i])
+                    i++
+                }
+            }
+        }
+        // console.log(i,e1,e2)
+        // unknow sequnce
+        // a b  [c d e ] f g
+        // a b  [d e q ] f g
+
+        let s1 = i //s1->e1 老的需要比对的部分
+        let s2 = i // s2->e2 新的需要比对的部分
+
+        let toBePatched = e2-s2+1 // 我们要操作的个数
+
+        const keyToNewIndexMap = new Map()
+        for(let i = s2;i<=e2;i++){
+            keyToNewIndexMap.set(c2[i].key,i)
+        }
+
+        const seq = new Array(toBePatched).fill(0)
+
+        for(let i = s1;i<=e1;i++){
+            const oldVNode = c1[i]
+            let newIndex = keyToNewIndexMap.get(oldVNode.key)
+            if(newIndex ==  null){
+                unmount(oldVNode)
+            }else{ 
+                // 新的老的都有 记录当前对应的索引 
+                // 用新的位置 跟老的位置关联
+                seq[newIndex - s2] = i + 1 // 这里是因为0可能是新增的（默认为0）可能是第一个
+                patch(oldVNode,c2[newIndex],el) // 如果新老都有 就比较属性跟 子节点
+            }
+        }
+        console.log(seq)
+        for(let i=toBePatched-1;i>=0;i--){
+            const currentIndex = s2+i //找到对应的索引
+            const child = c2[currentIndex] // q d e 
+            const anchor = currentIndex +1 <=c2.length ? c2[currentIndex+1].el : null
+            //判断 要移动 还是新增
+            // 如何 知道child 是新增的
+            if(seq[i] === 0 ){ // 如果有el 说明渲染过
+                patch(null,child,el,anchor)
+            }else{
+                hostInsert(child.el,el,anchor)
+            }
+        
+        }
+        console.log(keyToNewIndexMap)
+
     }
     function patchChild(preVnode,vnode,el){
         let c1 = preVnode.children
         let c2 = vnode.children
-
         const preShapFlag = preVnode.shapFlag
         const ShapFlag = vnode.shapFlag
 
@@ -143,9 +226,9 @@ export function createRenderer(options){
         // 接下来比儿子
         patchChild(preVnode,vnode,el)
     }
-    function processElement(preVnode,vnode,dom){
+    function processElement(preVnode,vnode,dom,anchor){
         if(preVnode == null){
-            mountElement(vnode,dom)
+            mountElement(vnode,dom,anchor)
         }else{
             //比较原元素
             patchElement(preVnode,vnode)
@@ -155,7 +238,7 @@ export function createRenderer(options){
         hostRemove(preVnode.el)
     }
     
-    function patch(preVnode,vnode,dom){
+    function patch(preVnode,vnode,dom,anchor = null){
         // 判断 标签名 跟key 如果一样 说明是同一个节点
         if(preVnode && !isSameVNode(preVnode,vnode)){
             unmount(preVnode)
@@ -170,7 +253,7 @@ export function createRenderer(options){
                 break;
             default:
                 if(shapFlag & shapeFlags.ELEMENT){
-                    processElement(preVnode,vnode,dom)
+                    processElement(preVnode,vnode,dom,anchor)
                 }
         }
         // if(preVnode == null){

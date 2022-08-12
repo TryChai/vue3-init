@@ -133,6 +133,8 @@ var VueRuntimeDOM = (() => {
 
   // packages/runtime-dom/src/patch-prop/patchStyle.ts
   function patchStyle(el, preValue, nextValue) {
+    preValue = preValue ? preValue : {};
+    nextValue = nextValue ? nextValue : {};
     const style = el.style;
     for (let key in nextValue) {
       style[key] = nextValue[key];
@@ -550,7 +552,7 @@ var VueRuntimeDOM = (() => {
         }
       }
     }
-    function mountElement(vnode, dom) {
+    function mountElement(vnode, dom, anchor) {
       let { type, props, children, shapFlag } = vnode;
       let el = vnode.el = hostCreateElement(type);
       if (props) {
@@ -562,7 +564,7 @@ var VueRuntimeDOM = (() => {
       if (shapFlag & 16 /* ARRAY_CHILDREN */) {
         mountChildren(children, el);
       }
-      hostInsert(el, dom);
+      hostInsert(el, dom, anchor);
     }
     function processText(preVnode, vnode, dom) {
       if (preVnode == null) {
@@ -578,7 +580,7 @@ var VueRuntimeDOM = (() => {
       let i = 0;
       let e1 = c1.length - 1;
       let e2 = c2.length - 1;
-      while (i <= e1 && i < e2) {
+      while (i <= e1 && i <= e2) {
         const n1 = c1[i];
         const n2 = c2[i];
         if (isSameVNode(n1, n2)) {
@@ -588,7 +590,64 @@ var VueRuntimeDOM = (() => {
         }
         i++;
       }
-      console.log(i, e1, e2);
+      while (i <= e1 && i <= e2) {
+        const n1 = c1[e1];
+        const n2 = c2[e2];
+        if (isSameVNode(n1, n2)) {
+          patch(n1, n2, el);
+        } else {
+          break;
+        }
+        e1--;
+        e2--;
+      }
+      if (i > e1) {
+        if (i <= e2) {
+          while (i <= e2) {
+            const nextPos = e2 + 1;
+            let anchor = c2.length <= nextPos ? null : c2[nextPos].el;
+            patch(null, c2[i], el, anchor);
+            i++;
+          }
+        }
+      } else if (i > e2) {
+        if (i <= e1) {
+          while (i <= e1) {
+            unmount(c1[i]);
+            i++;
+          }
+        }
+      }
+      let s1 = i;
+      let s2 = i;
+      let toBePatched = e2 - s2 + 1;
+      const keyToNewIndexMap = /* @__PURE__ */ new Map();
+      for (let i2 = s2; i2 <= e2; i2++) {
+        keyToNewIndexMap.set(c2[i2].key, i2);
+      }
+      const seq = new Array(toBePatched).fill(0);
+      for (let i2 = s1; i2 <= e1; i2++) {
+        const oldVNode = c1[i2];
+        let newIndex = keyToNewIndexMap.get(oldVNode.key);
+        if (newIndex == null) {
+          unmount(oldVNode);
+        } else {
+          seq[newIndex - s2] = i2 + 1;
+          patch(oldVNode, c2[newIndex], el);
+        }
+      }
+      console.log(seq);
+      for (let i2 = toBePatched - 1; i2 >= 0; i2--) {
+        const currentIndex = s2 + i2;
+        const child = c2[currentIndex];
+        const anchor = currentIndex + 1 <= c2.length ? c2[currentIndex + 1].el : null;
+        if (seq[i2] === 0) {
+          patch(null, child, el, anchor);
+        } else {
+          hostInsert(child.el, el, anchor);
+        }
+      }
+      console.log(keyToNewIndexMap);
     }
     function patchChild(preVnode, vnode, el) {
       let c1 = preVnode.children;
@@ -626,9 +685,9 @@ var VueRuntimeDOM = (() => {
       patchProps(oldProps, newProps, el);
       patchChild(preVnode, vnode, el);
     }
-    function processElement(preVnode, vnode, dom) {
+    function processElement(preVnode, vnode, dom, anchor) {
       if (preVnode == null) {
-        mountElement(vnode, dom);
+        mountElement(vnode, dom, anchor);
       } else {
         patchElement(preVnode, vnode);
       }
@@ -636,7 +695,7 @@ var VueRuntimeDOM = (() => {
     function unmount(preVnode) {
       hostRemove(preVnode.el);
     }
-    function patch(preVnode, vnode, dom) {
+    function patch(preVnode, vnode, dom, anchor = null) {
       if (preVnode && !isSameVNode(preVnode, vnode)) {
         unmount(preVnode);
         preVnode = null;
@@ -648,7 +707,7 @@ var VueRuntimeDOM = (() => {
           break;
         default:
           if (shapFlag & 1 /* ELEMENT */) {
-            processElement(preVnode, vnode, dom);
+            processElement(preVnode, vnode, dom, anchor);
           }
       }
     }
