@@ -4,6 +4,7 @@
 
 function getSequence(arr){
     let len = arr.length
+    let p = arr.slice()
     let result = [0]
     let lastIndex
     let start,end ,middle
@@ -13,6 +14,7 @@ function getSequence(arr){
          lastIndex = result[result.length -1]
          if(arr[lastIndex] < arrI){ // 说明当前这一项 比结果集中 最后一项大 放入集合中
             result.push(i)
+            p[i] = lastIndex // 存索引
             continue
          }
 
@@ -29,10 +31,20 @@ function getSequence(arr){
             }
          }
          if(arrI < arr[result[end]]){
+            p[i] = result[end-1]
             result[end] = i
          }
         }
     }
+    // 倒叙追溯 选取到结果集中的最后一个
+    let i = result.length
+    let last = result[i-1]
+
+    while(i-->0){ 
+        result[i] = last
+        last = p[last]
+    }
+    // console.log(p)
     return result
 }
 // 

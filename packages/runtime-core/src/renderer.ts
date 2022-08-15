@@ -1,5 +1,51 @@
-import { shapeFlags, createVNode, Text, isSameVNode } from './createVNode';
+import { shapeFlags, createVNode, Text, isSameVNode, Fragement } from './createVNode';
 import { isString, isNumber } from '../../shared/src/index';
+
+function getSequence(arr){
+    let len = arr.length
+    let p = arr.slice()
+    let result = [0]
+    let lastIndex
+    let start,end ,middle
+    for(let i = 0;i<len;i++){
+        const arrI = arr[i] 
+        if(arrI !== 0){ // 0 代表新增的节点 不计入最长递增子序列
+         lastIndex = result[result.length -1]
+         if(arr[lastIndex] < arrI){ // 说明当前这一项 比结果集中 最后一项大 放入集合中
+            result.push(i)
+            p[i] = lastIndex // 存索引
+            continue
+         }
+
+         //否则的情况
+         start = 0
+         end = result.length -1 
+         //二分查找
+         while(start < end){ // 计算有序比较 二分查找
+            middle = Math.floor((start + end) /2 )
+            if(arr[result[middle]] < arrI){
+                start = middle + 1
+            }else{
+                end = middle
+            }
+         }
+         if(arrI < arr[result[end]]){
+            p[i] = result[end-1]
+            result[end] = i
+         }
+        }
+    }
+    // 倒叙追溯 选取到结果集中的最后一个
+    let i = result.length
+    let last = result[i-1]
+
+    while(i-->0){ 
+        result[i] = last
+        last = p[last]
+    }
+    // console.log(p)
+    return result
+}
 
 export function createRenderer(options){
     // 用户可调用此方法 传入对应的渲染选项
@@ -68,6 +114,11 @@ export function createRenderer(options){
         if(preVnode == null){
             hostInsert(vnode.el = hostCreateTextNode(vnode.children),dom)
             
+        }else{
+            const el = vnode.el = preVnode.el
+            if(vnode.children !== preVnode.children){
+                hostSetText(el,vnode.children)
+            }
         }
     }
     function unmountChildren(children){
@@ -131,53 +182,68 @@ export function createRenderer(options){
                     i++
                 }
             }
-        }
-        // console.log(i,e1,e2)
-        // unknow sequnce
-        // a b  [c d e ] f g
-        // a b  [d e q ] f g
-
-        let s1 = i //s1->e1 老的需要比对的部分
-        let s2 = i // s2->e2 新的需要比对的部分
-
-        let toBePatched = e2-s2+1 // 我们要操作的个数
-
-        const keyToNewIndexMap = new Map()
-        for(let i = s2;i<=e2;i++){
-            keyToNewIndexMap.set(c2[i].key,i)
-        }
-
-        const seq = new Array(toBePatched).fill(0)
-
-        for(let i = s1;i<=e1;i++){
-            const oldVNode = c1[i]
-            let newIndex = keyToNewIndexMap.get(oldVNode.key)
-            if(newIndex ==  null){
-                unmount(oldVNode)
-            }else{ 
-                // 新的老的都有 记录当前对应的索引 
-                // 用新的位置 跟老的位置关联
-                seq[newIndex - s2] = i + 1 // 这里是因为0可能是新增的（默认为0）可能是第一个
-                patch(oldVNode,c2[newIndex],el) // 如果新老都有 就比较属性跟 子节点
+        }else{
+            // console.log(i,e1,e2)
+            // unknow sequnce
+            // a b  [c d e ] f g
+            // a b  [d e q ] f g
+    
+            let s1 = i //s1->e1 老的需要比对的部分
+            let s2 = i // s2->e2 新的需要比对的部分
+    
+            let toBePatched = e2-s2+1 // 我们要操作的个数
+    
+            const keyToNewIndexMap = new Map()
+            for(let i = s2;i<=e2;i++){
+                keyToNewIndexMap.set(c2[i].key,i)
             }
-        }
-        console.log(seq)
-        for(let i=toBePatched-1;i>=0;i--){
-            const currentIndex = s2+i //找到对应的索引
-            const child = c2[currentIndex] // q d e 
-            const anchor = currentIndex +1 <=c2.length ? c2[currentIndex+1].el : null
-            //判断 要移动 还是新增
-            // 如何 知道child 是新增的
-            if(seq[i] === 0 ){ // 如果有el 说明渲染过
-                patch(null,child,el,anchor)
-            }else{
-                hostInsert(child.el,el,anchor)
+    
+            const seq = new Array(toBePatched).fill(0)
+    
+            for(let i = s1;i<=e1;i++){
+                const oldVNode = c1[i]
+                let newIndex = keyToNewIndexMap.get(oldVNode.key)
+                if(newIndex ==  null){
+                    unmount(oldVNode)
+                }else{ 
+                    // 新的老的都有 记录当前对应的索引 
+                    // 用新的位置 跟老的位置关联
+                    seq[newIndex - s2] = i + 1 // 这里是因为0可能是新增的（默认为0）可能是第一个
+                    patch(oldVNode,c2[newIndex],el) // 如果新老都有 就比较属性跟 子节点
+                }
             }
-        
+
+            let incr = getSequence(seq)
+            // console.log(incr)
+            let j = incr.length - 1
+
+            // toBePatched = 4 
+            // incr = [1,2]
+
+            // console.log(seq)
+            for(let i=toBePatched-1;i>=0;i--){
+                const currentIndex = s2+i //找到对应的索引
+                const child = c2[currentIndex] // q d e 
+                const anchor = currentIndex +1 <=c2.length ? c2[currentIndex+1].el : null
+                //判断 要移动 还是新增
+                // 如何 知道child 是新增的
+                if(seq[i] === 0 ){ // 如果有el 说明渲染过
+                    patch(null,child,el,anchor)
+                }else{ // 这里应该尽量减少移动的节点，最长递增子序列来实现
+                    if( i != incr[j]){ // 通过序列来进行比对 
+                        hostInsert(child.el,el,anchor)
+                    }else{
+                        j-- // 不做任何操作
+                    }
+                }
+            
+            }
+            // console.log(keyToNewIndexMap)
+
         }
-        console.log(keyToNewIndexMap)
 
     }
+    // vue 中在使用的时候 必须有一个根节点 在一个代码块中
     function patchChild(preVnode,vnode,el){
         let c1 = preVnode.children
         let c2 = vnode.children
@@ -235,9 +301,18 @@ export function createRenderer(options){
         }
     }
     function unmount(preVnode){
+        if(preVnode.type === Fragement){
+            return unmountChildren(preVnode.children)
+        }
         hostRemove(preVnode.el)
     }
-    
+    function processFragement(preVnode,vnode,dom){
+        if(preVnode == null){
+            mountChildren(vnode.children,dom)
+        }else{
+            patchKeyedChildren(preVnode.children,vnode.children,dom)
+        }
+    }
     function patch(preVnode,vnode,dom,anchor = null){
         // 判断 标签名 跟key 如果一样 说明是同一个节点
         if(preVnode && !isSameVNode(preVnode,vnode)){
@@ -251,6 +326,9 @@ export function createRenderer(options){
             case Text:
                 processText(preVnode,vnode,dom)
                 break;
+            case Fragement:
+                processFragement(preVnode,vnode,dom)
+                break
             default:
                 if(shapFlag & shapeFlags.ELEMENT){
                     processElement(preVnode,vnode,dom,anchor)

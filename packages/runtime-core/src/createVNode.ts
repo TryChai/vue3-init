@@ -1,6 +1,7 @@
 import { isArray, isString } from "@vue/shared"
 
 export const Text = Symbol('Text')
+export const Fragement = Symbol('Fragement')
 
 export function isVnode(val){
     return val.__v_isVNode
