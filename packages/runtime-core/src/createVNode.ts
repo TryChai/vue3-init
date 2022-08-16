@@ -1,4 +1,4 @@
-import { isArray, isString } from "@vue/shared"
+import { isArray, isString,isObject } from "@vue/shared"
 
 export const Text = Symbol('Text')
 export const Fragement = Symbol('Fragement')
@@ -10,7 +10,8 @@ export function isSameVNode(v1,v2){
     return v1.type === v2.type && v1.key == v2.key
 }
 export function createVNode(type,props=null,children=null){
-    let shapFlag = isString(type) ? shapeFlags.ELEMENT : 0
+    let shapFlag = isString(type) ? shapeFlags.ELEMENT : 
+    isObject(type) ? shapeFlags.STATEFUL_COMPONENT: 0
     //将当前节点跟儿子做映射 权限组合 位运算
     const vnode = { // vnode 要对应真实的节点 
         __v_isVNode:true,

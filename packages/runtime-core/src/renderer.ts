@@ -1,5 +1,7 @@
 import { shapeFlags, createVNode, Text, isSameVNode, Fragement } from './createVNode';
-import { isString, isNumber } from '../../shared/src/index';
+import { isString, isNumber } from '@vue/shared';
+import { createComponentInstance, setupComponent } from './component';
+import { ReactiveEffect } from '../../reactivity/src/effect';
 
 function getSequence(arr){
     let len = arr.length
@@ -313,6 +315,46 @@ export function createRenderer(options){
             patchKeyedChildren(preVnode.children,vnode.children,dom)
         }
     }
+    function setupRenderEffect(instance,dom,anchor){
+        const componentUpdate = ()=>{
+            const {render,data} = instance
+            if(!instance.isMounted){
+                //组件最重要渲染的 虚拟节点
+              const subTree = render.call(data)
+              patch(null,subTree,dom,anchor)
+              instance.subTree = subTree
+              instance.isMounted = true
+            }else{
+               //更新逻辑
+               const subTree = render.call(data)
+               patch(instance.subTree,subTree,dom,anchor)
+               instance.subTree = subTree
+            }
+        }
+        const effect = new ReactiveEffect(componentUpdate)
+        let update = instance.update = effect.run.bind(effect)
+        update()
+    }
+    function mountComponent(vnode,dom,anchor){
+        // 1、组件挂载前 需要产生一个组件的实例，组件的状态，属性 生命周期
+        const instance = createComponentInstance(vnode)
+        // 2、组件的插槽 处理组件的属性 给组件的实例复制
+        //这个地方处理属性和插槽
+
+        setupComponent(instance)
+        // 3、 给组件产生一个effect 这样可以组件变化后重新渲染
+        setupRenderEffect(instance,dom,anchor)
+
+        // 组件的 优点  复用 逻辑拆分 方便维护 vue组件级别更新
+    }
+    function processComponent(preVnode,vnode,dom,anchor){
+        if(preVnode == null){
+            // 初始化组件
+            mountComponent(vnode,dom,anchor)
+        }else{
+            // 组件更新 插槽的更新
+        }
+    }
     function patch(preVnode,vnode,dom,anchor = null){
         // 判断 标签名 跟key 如果一样 说明是同一个节点
         if(preVnode && !isSameVNode(preVnode,vnode)){
@@ -332,6 +374,8 @@ export function createRenderer(options){
             default:
                 if(shapFlag & shapeFlags.ELEMENT){
                     processElement(preVnode,vnode,dom,anchor)
+                }else if(shapFlag & shapeFlags.STATEFUL_COMPONENT){
+                    processComponent(preVnode,vnode,dom,anchor)
                 }
         }
         // if(preVnode == null){
