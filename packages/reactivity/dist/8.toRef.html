@@ -15,6 +15,7 @@
         const {effect,reactive,computed,watch,ref,toRef,toRefs,proxyRefs} = VueReactivity
         const obj = {name:'xiaowang',age:'23'}
         const state = reactive(obj)
+       
         let {name,age} = toRefs(state)
         let my = proxyRefs({
             name,age

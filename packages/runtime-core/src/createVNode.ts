@@ -17,6 +17,7 @@ export function createVNode(type,props=null,children=null){
         __v_isVNode:true,
         type,
         props,
+        component:null,
         children,
         key:props && props.key,
         el:null, //真实节点的映射

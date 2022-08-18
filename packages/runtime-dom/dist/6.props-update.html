@@ -12,18 +12,26 @@
     <script>
       const {render,Text,h,Fragement} = VueRuntimeDOM
 
-    const VueComponent = {
-        props:{ // propsOptions 用户提供的告诉vue 哪些是属性没其他的回放到attrs中
-            a:Number,
-            b:Number
-        },
-        data(){
-            return {name:'zf'}
+      const ChildComponent = {
+        props:{
+            a:{}
         },
         render(){
-            return h('button',{onClick:()=>{
-                this.b = 2
-            }},h('span',this.name+this.$attrs.c))
+            return h('span',this.a)
+        }
+      }
+    const VueComponent = {
+        
+        data(){
+            return {flag:true}
+        },
+        render(){
+            return h(Fragement,[
+                h(ChildComponent,{a:this.flag ? 1:2,b:100}),
+                h('button',{onClick:()=>{
+                    this.flag = false
+                }},'重新渲染组件')
+            ])
         }
     }
     

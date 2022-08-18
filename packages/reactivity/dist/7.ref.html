@@ -16,6 +16,7 @@
         const obj = {name:'xiaowang',age:'23'}
         let flag = ref(false) //基本类型没有收集能力 可以用ref 包裹 变成对象类型
         const state = reactive(obj)
+        console.log(flag)
        effect(()=>{
         app.innerHTML = flag.value 
        })

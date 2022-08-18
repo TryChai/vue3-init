@@ -2,6 +2,7 @@ import { shapeFlags, createVNode, Text, isSameVNode, Fragement } from './createV
 import { isString, isNumber } from '@vue/shared';
 import { createComponentInstance, setupComponent } from './component';
 import { ReactiveEffect } from '../../reactivity/src/effect';
+import { queueJob } from './scheduler';
 
 function getSequence(arr){
     let len = arr.length
@@ -315,37 +316,113 @@ export function createRenderer(options){
             patchKeyedChildren(preVnode.children,vnode.children,dom)
         }
     }
+    function updateComponentPreRender(instance,next){
+        instance.next = null
+        instance.vnode = next
+        updateProps(instance,instance.props,next.props)
+    }
     function setupRenderEffect(instance,dom,anchor){
         const componentUpdate = ()=>{
-            const {render,data} = instance
+            const {render,data,proxy} = instance
+            // render 的函数可以取到data 也可以取到props 也可以取到attr
             if(!instance.isMounted){
                 //组件最重要渲染的 虚拟节点
-              const subTree = render.call(data)
+              const subTree = render.call(proxy)
               patch(null,subTree,dom,anchor)
               instance.subTree = subTree
               instance.isMounted = true
             }else{
                //更新逻辑
-               const subTree = render.call(data)
+            //统一处理
+              let next = instance.next
+              if(next){ // 更新属性
+                updateComponentPreRender(instance,next)
+              }
+
+               const subTree = render.call(proxy)
                patch(instance.subTree,subTree,dom,anchor)
                instance.subTree = subTree
             }
         }
-        const effect = new ReactiveEffect(componentUpdate)
+        const effect = new ReactiveEffect(componentUpdate,()=>queueJob(instance.update))
         let update = instance.update = effect.run.bind(effect)
         update()
     }
+
+   /**
+    * 组件渲染过程
+    * 1、创建实例 这里会有一个代理对象 会代理data,props,attrs
+    * 2、给组件实例赋值，给instance 属性赋值
+    * 3、创建一个effect 运行
+    * 
+    * 组件更新过程
+    * 1、组件的状态发生变化会触发自己的effect重新执行
+    * 2、属性更新，会执行updateCOmponent内容会比较要不要更新如果要更新 会调用instance的update方法，在调用render之前更新属性即可
+    *
+    * data，props,attrs 都被代理到instance.proxy上 
+    * instance.data 是响应式的 如果直接修改data 里面的值 在代理里面是直接修改的 
+    * instance.props 是响应式的 但是页面拿到的是代理过的proxy 的值并不是响应式的
+    * 如果父组件修改了props 的值  就会在differ 算法里里面对比然后修改instance.props的值达到更新的目的
+    * */
+
     function mountComponent(vnode,dom,anchor){
         // 1、组件挂载前 需要产生一个组件的实例，组件的状态，属性 生命周期
-        const instance = createComponentInstance(vnode)
+        const instance = vnode.component = createComponentInstance(vnode)
         // 2、组件的插槽 处理组件的属性 给组件的实例复制
         //这个地方处理属性和插槽
-
+        
         setupComponent(instance)
         // 3、 给组件产生一个effect 这样可以组件变化后重新渲染
         setupRenderEffect(instance,dom,anchor)
 
         // 组件的 优点  复用 逻辑拆分 方便维护 vue组件级别更新
+    }
+    function hasChange(preProps,nextProps){
+        for(let key in nextProps){
+            if(nextProps[key] != preProps[key]){
+                return true
+            }
+        }
+        return false
+    }
+    function updateProps(instance,preProps,nextProps){
+        // 比较2个属性是否有差异
+        if(hasChange(preProps,nextProps)){
+            for(let key in nextProps){
+                // 这里可以直接修改 
+                // 页面代理的是proxy 就是组件内部的this 被代理到instance.proxy上了
+                // 可以修改instance.props 但是不能修改instance.proxy
+                instance.props[key] = nextProps[key]
+            }
+            for(let key in instance.props){
+                if(!(key in nextProps)){
+                    delete instance.props[key]
+                }
+            }
+        }
+    }
+    function shouldComponentUpdate(preVnode,vnode){
+        const preProps = preVnode.props
+        const nextProps = vnode.props
+        return hasChange(preProps,nextProps) // 如果属性 变化 就要更新
+    }
+    function updateComponent(preVnode,vnode){
+        //拿到之前的属性 跟之后的属性是否有变化
+        const instance = vnode.component = preVnode.component
+        
+        if(shouldComponentUpdate(preVnode,vnode)){
+            instance.next = vnode
+            instance.update()
+        }else{
+            instance.vnode = vnode
+        }
+        //找个props 包含了 attrs
+        // preProps,nextProps 是传进来的props 是父组件上面写的props 不是响应数据
+        // instance.props 是子组件上面使用的props 是响应数据  
+        // const preProps = preVnode.props
+        // const nextProps = vnode.props
+
+        // updateProps(instance,preProps,nextProps)
     }
     function processComponent(preVnode,vnode,dom,anchor){
         if(preVnode == null){
@@ -353,6 +430,7 @@ export function createRenderer(options){
             mountComponent(vnode,dom,anchor)
         }else{
             // 组件更新 插槽的更新
+            updateComponent(preVnode,vnode)
         }
     }
     function patch(preVnode,vnode,dom,anchor = null){

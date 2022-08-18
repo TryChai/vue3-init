@@ -11,19 +11,20 @@
     <script src="./runtime-dom.global.js"></script>
     <script>
       const {render,Text,h,Fragement} = VueRuntimeDOM
-
+    // optionApi compositionApi
     const VueComponent = {
-        props:{ // propsOptions 用户提供的告诉vue 哪些是属性没其他的回放到attrs中
-            a:Number,
-            b:Number
-        },
         data(){
-            return {name:'zf'}
+            return {count:0}
         },
         render(){
-            return h('button',{onClick:()=>{
-                this.b = 2
-            }},h('span',this.name+this.$attrs.c))
+            console.log('render')
+            return h('div',[h('button',{
+                onClick:()=>{
+                    this.count++
+                    this.count++
+                    this.count++
+                }
+            },'增加'),h(Text,null,this.count)])
         }
     }
     

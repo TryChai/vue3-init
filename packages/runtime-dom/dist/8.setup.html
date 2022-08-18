@@ -11,19 +11,33 @@
     <script src="./runtime-dom.global.js"></script>
     <script>
       const {render,Text,h,Fragement} = VueRuntimeDOM
-
+    // optionApi compositionApi
+    function useCount(){
+        const state = reactive({count:0})
+        const handleClick = ()=>{
+            state.count++
+        }
+        return {
+            state,
+            handleClick
+        }
+    }
     const VueComponent = {
-        props:{ // propsOptions 用户提供的告诉vue 哪些是属性没其他的回放到attrs中
-            a:Number,
-            b:Number
-        },
         data(){
-            return {name:'zf'}
+            return {count:0}
+        },
+        setup(){
+            let {state,handleClick} = useCount()
+            return {
+                ...toRefs(state),
+                handleClick
+            }
         },
         render(){
-            return h('button',{onClick:()=>{
-                this.b = 2
-            }},h('span',this.name+this.$attrs.c))
+            
+            return h('div',[h('button',{
+                onClick:()=>this.handleClick()
+            },'增加'),h(Text,null,this.count)])
         }
     }
     
