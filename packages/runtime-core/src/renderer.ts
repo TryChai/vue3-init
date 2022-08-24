@@ -72,7 +72,7 @@ export function createRenderer(options){
         return children[i]
     }
 
-    function mountChildren(children,container){
+    function mountChildren(children,container,parent){
         for(let i = 0;i<children.length;i++){
 
             // 处理后 不会改变children 的内容
@@ -80,7 +80,7 @@ export function createRenderer(options){
             //child 可能是文本 把文本变成虚拟节点
 
 
-            patch(null,child,container) //递归渲染子节点
+            patch(null,child,container,parent) //递归渲染子节点
         }
     }
     function patchProps(oldProps,newProps,el){
@@ -95,7 +95,7 @@ export function createRenderer(options){
             }
         }
     }
-    function mountElement(vnode,dom,anchor){
+    function mountElement(vnode,dom,anchor,parent){
         let {type,props,children,shapFlag} = vnode
         let el = vnode.el = hostCreateElement(type)
 
@@ -108,7 +108,7 @@ export function createRenderer(options){
             hostSetElementText(el,children)
         }
         if(shapFlag & shapeFlags.ARRAY_CHILDREN){
-            mountChildren(children,el)
+            mountChildren(children,el,parent)
         }
         hostInsert(el,dom,anchor)
     }
@@ -246,7 +246,7 @@ export function createRenderer(options){
 
     }
     // vue 中在使用的时候 必须有一个根节点 在一个代码块中
-    function patchChild(preVnode,vnode,el){
+    function patchChild(preVnode,vnode,el,parent){
         let c1 = preVnode.children
         let c2 = vnode.children
         const preShapFlag = preVnode.shapFlag
@@ -279,12 +279,12 @@ export function createRenderer(options){
                     hostSetElementText(el,'')
                 }
                 if(ShapFlag & shapeFlags.ARRAY_CHILDREN){
-                    mountChildren(c2,el)
+                    mountChildren(c2,el,parent)
                 }
             }
         }
     }
-    function patchElement(preVnode,vnode){
+    function patchElement(preVnode,vnode,parent){
         // preVnode,vnode 能服用 节点就不用删除
         let el = vnode.el = preVnode.el
         let oldProps = preVnode.props
@@ -292,14 +292,14 @@ export function createRenderer(options){
         patchProps(oldProps,newProps,el)
 
         // 接下来比儿子
-        patchChild(preVnode,vnode,el)
+        patchChild(preVnode,vnode,el,parent)
     }
-    function processElement(preVnode,vnode,dom,anchor){
+    function processElement(preVnode,vnode,dom,anchor,parent){
         if(preVnode == null){
-            mountElement(vnode,dom,anchor)
+            mountElement(vnode,dom,anchor,parent)
         }else{
             //比较原元素
-            patchElement(preVnode,vnode)
+            patchElement(preVnode,vnode,parent)
         }
     }
     function unmount(preVnode){
@@ -308,9 +308,9 @@ export function createRenderer(options){
         }
         hostRemove(preVnode.el)
     }
-    function processFragement(preVnode,vnode,dom){
+    function processFragement(preVnode,vnode,dom,parent){
         if(preVnode == null){
-            mountChildren(vnode.children,dom)
+            mountChildren(vnode.children,dom,parent)
         }else{
             patchKeyedChildren(preVnode.children,vnode.children,dom)
         }
@@ -331,7 +331,7 @@ export function createRenderer(options){
                     invokerFns(bm)
                 }
               const subTree = render.call(proxy)
-              patch(null,subTree,dom,anchor)
+              patch(null,subTree,dom,anchor,instance)
               instance.subTree = subTree
               instance.isMounted = true
               if(m){
@@ -346,7 +346,7 @@ export function createRenderer(options){
               }
 
                const subTree = render.call(proxy)
-               patch(instance.subTree,subTree,dom,anchor)
+               patch(instance.subTree,subTree,dom,anchor,instance)
                if(instance.u){
                     invokerFns(instance.u)
                }
@@ -374,9 +374,9 @@ export function createRenderer(options){
     * 如果父组件修改了props 的值  就会在differ 算法里里面对比然后修改instance.props的值达到更新的目的
     * */
 
-    function mountComponent(vnode,dom,anchor){
+    function mountComponent(vnode,dom,anchor,parent){
         // 1、组件挂载前 需要产生一个组件的实例，组件的状态，属性 生命周期
-        const instance = vnode.component = createComponentInstance(vnode)
+        const instance = vnode.component = createComponentInstance(vnode,parent)
         // 2、组件的插槽 处理组件的属性 给组件的实例复制
         //这个地方处理属性和插槽
         
@@ -433,22 +433,21 @@ export function createRenderer(options){
 
         // updateProps(instance,preProps,nextProps)
     }
-    function processComponent(preVnode,vnode,dom,anchor){
+    function processComponent(preVnode,vnode,dom,anchor,parent){
         if(preVnode == null){
             // 初始化组件
-            mountComponent(vnode,dom,anchor)
+            mountComponent(vnode,dom,anchor,parent)
         }else{
             // 组件更新 插槽的更新
             updateComponent(preVnode,vnode)
         }
     }
-    function patch(preVnode,vnode,dom,anchor = null){
+    function patch(preVnode,vnode,dom,anchor = null,parent = null){
         // 判断 标签名 跟key 如果一样 说明是同一个节点
         if(preVnode && !isSameVNode(preVnode,vnode)){
             unmount(preVnode)
             preVnode = null // 将preVnode置为 null 就会走vnode 的初始化
         }
-
         // 看preVnode 如果是null 说明之前没有 直接增加
         const {type,shapFlag} = vnode
         switch(type){
@@ -456,13 +455,13 @@ export function createRenderer(options){
                 processText(preVnode,vnode,dom)
                 break;
             case Fragement:
-                processFragement(preVnode,vnode,dom)
+                processFragement(preVnode,vnode,dom,parent)
                 break
             default:
                 if(shapFlag & shapeFlags.ELEMENT){
-                    processElement(preVnode,vnode,dom,anchor)
+                    processElement(preVnode,vnode,dom,anchor,parent)
                 }else if(shapFlag & shapeFlags.STATEFUL_COMPONENT){
-                    processComponent(preVnode,vnode,dom,anchor)
+                    processComponent(preVnode,vnode,dom,anchor,parent)
                 }
         }
         // if(preVnode == null){

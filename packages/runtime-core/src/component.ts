@@ -7,7 +7,7 @@ export let instance = null
 export const getCurrentInstance = ()=>instance
 
 export const setCurrentInstance = i => instance = i
-export function createComponentInstance(vnode){
+export function createComponentInstance(vnode,parent){
     let instance = {
         data:null, //组件本身的数据
         vnode,//标识实例对应的虚拟节点
@@ -25,7 +25,11 @@ export function createComponentInstance(vnode){
         proxy:null,//代理对象
         setupState:{},//setup 返回的是对象则要给这个对象赋值
         slots:{} ,//存放组件的所有插槽信息
-        exposed:{}
+        exposed:{},
+        parent,// 标记父组件
+        provides:parent?parent.provides:Object.create(null),
+        //如果 儿子在provide中提供了属性 会影响父亲
+        // 在用户用provide（）的时候 将父亲provide 拷贝一份
     }
 
 
