@@ -22,6 +22,22 @@
             handleClick
         }
     }
+    const MyComponent = {
+        props:{
+            count:{}
+        },
+        setup(props,{attrs,emit}){
+            return ()=>{
+                // return h('div',null,attrs.count)
+                return h(Fragement,[
+                    h('div',null,props.count),
+                    h('button',{onClick:()=>{
+                        emit('childUpdate')
+                    }},'组件按钮')
+                ])
+            }
+        }
+    }
     const VueComponent = {
         data(){
             // return {count:0}
@@ -40,7 +56,9 @@
             
             return h('div',[h('button',{
                 onClick:()=>this.handleClick()
-            },'增加'),h(Text,null,this.count)])
+            },'增加'),h(MyComponent,{count:this.count,onChildUpdate:()=>{
+                this.handleClick()
+            }})])
         }
     }
     

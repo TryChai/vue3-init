@@ -6,3 +6,7 @@ export * from './h.ts'
 
 export * from './scheduler'
 export {createRenderer} from './renderer'
+
+export {getCurrentInstance} from './component'
+
+export * from './apiLifeCycle'

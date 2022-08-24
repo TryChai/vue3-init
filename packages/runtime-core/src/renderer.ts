@@ -1,9 +1,8 @@
 import { shapeFlags, createVNode, Text, isSameVNode, Fragement } from './createVNode';
-import { isString, isNumber } from '@vue/shared';
+import { isString, isNumber ,invokerFns } from '@vue/shared';
 import { createComponentInstance, setupComponent } from './component';
 import { ReactiveEffect } from '../../reactivity/src/effect';
 import { queueJob } from './scheduler';
-
 function getSequence(arr){
     let len = arr.length
     let p = arr.slice()
@@ -327,10 +326,17 @@ export function createRenderer(options){
             // render 的函数可以取到data 也可以取到props 也可以取到attr
             if(!instance.isMounted){
                 //组件最重要渲染的 虚拟节点
+                const {bm,m} = instance
+                if(bm){
+                    invokerFns(bm)
+                }
               const subTree = render.call(proxy)
               patch(null,subTree,dom,anchor)
               instance.subTree = subTree
               instance.isMounted = true
+              if(m){
+                invokerFns(m)
+              }
             }else{
                //更新逻辑
             //统一处理
@@ -341,6 +347,9 @@ export function createRenderer(options){
 
                const subTree = render.call(proxy)
                patch(instance.subTree,subTree,dom,anchor)
+               if(instance.u){
+                    invokerFns(instance.u)
+               }
                instance.subTree = subTree
             }
         }

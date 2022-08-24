@@ -24,10 +24,14 @@ export function createVNode(type,props=null,children=null){
         shapFlag, //打个标记
     }
 
-    if(children){
+    if(children != undefined){
         let temp = 0
         if(isArray(children)){
             temp = shapeFlags.ARRAY_CHILDREN
+        }else if(isObject(children)){
+            temp = shapeFlags.SLOTS_CHILDREN
+
+            //这里还有其他的情况
         }else{
             children = String(children)
             temp = shapeFlags.TEXT_CHILDREN

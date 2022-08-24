@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<div id="app"></div>
+<body>
+    <script src="./runtime-dom.global.js"></script>
+    <script>
+      const {render,Text,h,Fragement,reactive,toRefs} = VueRuntimeDOM
+    // optionApi compositionApi
+    function useCount(){
+        const state = reactive({count:0})
+        const handleClick = ()=>{
+            state.count++
+        }
+        return {
+            state,
+            handleClick
+        }
+    }
+    const MyComponent = {
+        
+        setup(props,{attrs,emit,slots,expose}){
+            // 这里不能调用this
+            // 所以这里需要一个slot 参数 获取插槽
+
+            expose({
+                a:1,b:2
+            })
+           return function(){
+            // 这里render 函数能拿到this
+            return h(Fragement,[
+                h('div',this.$slots.default()),
+                h('div',slots.header()),
+                h('div',slots.main()),
+                h('div',slots.footer()),
+            ]
+            )
+           }
+        }
+    }
+    const VueComponent = {
+        
+        render(){
+            
+            return h('div',[h(MyComponent,null,{
+                default:()=>{
+                    return h('a','default')
+                },
+                header:()=>{
+                    return h('a','hello')
+                },
+                main:()=>{
+                    return h('a','vue')
+                },
+                footer:()=>{
+                    return h('a','zf')
+                },
+            })])
+        }
+    }
+    
+    render(h(VueComponent),app)
+    //属性的变化 导致 页面的重新渲染
+    </script>
+</body>
+</html>
