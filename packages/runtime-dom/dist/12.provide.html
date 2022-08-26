@@ -13,17 +13,18 @@
       const {render,Text,h,inject,Fragement,reactive,provide,toRefs,onMounted,getCurrentInstance} = VueRuntimeDOM
     const ChildComponent = {
         setup(){
-            // const state = inject('state')
+            const state = inject('state',{name:'234',age:3})
+            console.log(state)
             console.log(getCurrentInstance())
             return ()=>{
-                // return h(Text,state.name + state.age)
-                return h(Text,'ok')
+                return h(Text,state.name + state.age)
+                // return h(Text,'ok')
             }
         }
     }
      const VueComponent = {
         setup(){
-            // const state = reactive({name:'xxx',age:'12'})
+            const state = reactive({name:'xxx',age:'12'})
             // provide('state',state)
             setTimeout(()=>{
                 state.name = 'sss'

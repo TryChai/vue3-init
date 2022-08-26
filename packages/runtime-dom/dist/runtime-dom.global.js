@@ -40,14 +40,17 @@ var VueRuntimeDOM = (() => {
     computed: () => computed,
     createRenderer: () => createRenderer,
     createVNode: () => createVNode,
+    defineAsyncComponent: () => defineAsyncComponent,
     effect: () => effect,
     getCurrentInstance: () => getCurrentInstance,
     h: () => h,
+    inject: () => inject,
     isSameVNode: () => isSameVNode,
     isVnode: () => isVnode,
     onBeforeMount: () => onBeforeMount,
     onMounted: () => onMounted,
     onUpdated: () => onUpdated,
+    provide: () => provide,
     proxyRefs: () => proxyRefs,
     queueJob: () => queueJob,
     reactive: () => reactive,
@@ -1057,6 +1060,46 @@ var VueRuntimeDOM = (() => {
   var onBeforeMount = createInvoker2("bm" /* BEFORE_MOUNT */);
   var onMounted = createInvoker2("m" /* MOUNTED */);
   var onUpdated = createInvoker2("u" /* UPDATED */);
+
+  // packages/runtime-core/src/apiInject.ts
+  function provide(key, value) {
+    if (!instance)
+      return;
+    let parentProvides = instance.parent && instance.parent.provides;
+    let currentProvides = instance.provides;
+    if (currentProvides === parentProvides) {
+      currentProvides = instance.provides = Object.create(parentProvides);
+    }
+    currentProvides[key] = value;
+  }
+  function inject(key, defaultValue) {
+    var _a;
+    if (!instance)
+      return;
+    const provides = (_a = instance.parent) == null ? void 0 : _a.provides;
+    if (provides && key in provides) {
+      return provides[key];
+    } else {
+      return defaultValue;
+    }
+  }
+
+  // packages/runtime-core/src/defineAsyncComponent.ts
+  function defineAsyncComponent(loader) {
+    let Componet = null;
+    return {
+      setup() {
+        const loaded = ref(false);
+        loader().then((v) => {
+          loaded.value = true;
+          Componet = v;
+        });
+        return () => {
+          return loaded.value ? h(Componet) : h(Fragement, []);
+        };
+      }
+    };
+  }
 
   // packages/runtime-dom/src/index.ts
   var renderOptions = __spreadValues({

@@ -2,7 +2,7 @@ import { isObject, isArray } from '../../shared/src/index';
 import { createVNode, isVnode } from './createVNode';
 
 
-export function h(type,propOrChildren,children){
+export function h(type,propOrChildren?,children?){
     
     // h方法 如果参数有两种情况 1）元素+属性 2）元素+儿子
     const l = arguments.length
