@@ -16,23 +16,53 @@
         defineAsyncComponent
 
     } = VueRuntimeDOM
-    const VueComponent = defineAsyncComponent(async ()=>{
-        // await new Promise((resolve,reject)=>{
-        //     setTimeout(()=>{
-        //         resolve()
-        //     },1000)
-        // })
-        // return import('./test.js').then(dat=>data.default)
-        return new Promise((resolve,reject)=>{
-            setTimeout(()=>{
-                resolve({
-                    render:()=>{
-                        return h(Text,'hello word')
-                    }
-                })
-            },1000)
+    // const VueComponent = defineAsyncComponent(async ()=>{
+    //     // await new Promise((resolve,reject)=>{
+    //     //     setTimeout(()=>{
+    //     //         resolve()
+    //     //     },1000)
+    //     // })
+    //     // return import('./test.js').then(dat=>data.default)
+    //     return new Promise((resolve,reject)=>{
+    //         setTimeout(()=>{
+    //             resolve({
+    //                 render:()=>{
+    //                     return h(Text,'hello word')
+    //                 }
+    //             })
+    //         },1000)
             
-        })
+    //     })
+    // })
+    const VueComponent = defineAsyncComponent({
+        loader:()=>{
+            return new Promise((resolve,reject)=>{
+                setTimeout(()=>{
+                    resolve({
+                        render:()=>{
+                            return h(Text,'hello word')
+                        }
+                    })
+                },3000)
+                
+            })
+        },
+        delay:300,
+        timeout:2000,
+        loadingComponent:{
+            render:()=>{
+                return h('div','loading')
+            }
+        },
+        onError(retry,fail){
+            console.log('失败重试')
+            retry()
+        },
+        errorComponent:{
+            render:()=>{
+                return h('div','出错啦~~~')
+            }
+        }
     })
     
      render(h(VueComponent),app)

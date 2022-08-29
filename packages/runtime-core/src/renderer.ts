@@ -123,12 +123,12 @@ export function createRenderer(options){
             }
         }
     }
-    function unmountChildren(children){
+    function unmountChildren(children,parent){
         children.forEach(child => {
-            unmount(child)
+            unmount(child,parent)
         });
     }
-    function patchKeyedChildren(c1,c2,el){
+    function patchKeyedChildren(c1,c2,el,parent){
         // 尽可能的复用 
         // 先考虑一些顺序相同的情况 ，比如 追加 或者删除
         let i = 0 
@@ -154,7 +154,7 @@ export function createRenderer(options){
             const n1 = c1[e1]
             const n2 = c2[e2]
             if(isSameVNode(n1,n2)){
-                patch(n1,n2,el)
+                patch(n1,n2,el,parent)
             }else{
                 break
             }
@@ -172,7 +172,7 @@ export function createRenderer(options){
                     // 看一下下一项是否在数组内 说明有参照物 
                     let anchor = c2.length <= nextPos ? null : c2[nextPos].el
                    // 如果anchor有值  向前插入 如果没值就是往后追加
-                    patch(null,c2[i],el,anchor)
+                    patch(null,c2[i],el,anchor,parent)
                     i++
 
                 }
@@ -180,7 +180,7 @@ export function createRenderer(options){
         }else if(i>e2){ //老的多 新的少
             if(i<=e1){
                 while(i<=e1){
-                    unmount(c1[i])
+                    unmount(c1[i],parent)
                     i++
                 }
             }
@@ -206,7 +206,7 @@ export function createRenderer(options){
                 const oldVNode = c1[i]
                 let newIndex = keyToNewIndexMap.get(oldVNode.key)
                 if(newIndex ==  null){
-                    unmount(oldVNode)
+                    unmount(oldVNode,parent)
                 }else{ 
                     // 新的老的都有 记录当前对应的索引 
                     // 用新的位置 跟老的位置关联
@@ -256,7 +256,7 @@ export function createRenderer(options){
 
         if(ShapFlag & shapeFlags.TEXT_CHILDREN){ // 文本 数组
             if(preShapFlag & shapeFlags.ARRAY_CHILDREN){
-                unmountChildren(c1)
+                unmountChildren(c1,parent)
             }
             if(c1 !== c2){
                 hostSetElementText(el,c2)
@@ -269,10 +269,10 @@ export function createRenderer(options){
                 if(ShapFlag & shapeFlags.ARRAY_CHILDREN){
                     // 前后都是数组
                     // diff 算法
-                    patchKeyedChildren(c1,c2,el)
+                    patchKeyedChildren(c1,c2,el,parent)
                 }else{
                     // 现在没有了
-                    unmountChildren(c1)
+                    unmountChildren(c1,parent)
                 }
             }else{
                 if(preShapFlag & shapeFlags.TEXT_CHILDREN){
@@ -302,9 +302,15 @@ export function createRenderer(options){
             patchElement(preVnode,vnode,parent)
         }
     }
-    function unmount(preVnode){
+    function unmount(preVnode,parent){
+        let {shapFlag,component} = preVnode
+        if(shapFlag & shapeFlags.COMPONENT_SHOULD_KEEP_ALIVE){
+            parent.ctx.deactivated(preVnode)
+        }
         if(preVnode.type === Fragement){
-            return unmountChildren(preVnode.children)
+            return unmountChildren(preVnode.children,parent)
+        }else if(shapFlag & shapeFlags.COMPONENT){
+            return unmount(component.subTree,parent)
         }
         hostRemove(preVnode.el)
     }
@@ -312,13 +318,15 @@ export function createRenderer(options){
         if(preVnode == null){
             mountChildren(vnode.children,dom,parent)
         }else{
-            patchKeyedChildren(preVnode.children,vnode.children,dom)
+            patchKeyedChildren(preVnode.children,vnode.children,dom,parent)
         }
     }
     function updateComponentPreRender(instance,next){
         instance.next = null
         instance.vnode = next
         updateProps(instance,instance.props,next.props)
+
+        Object.assign(instance.slots,next.children) // 用新的节点儿子覆盖旧的插槽
     }
     function setupRenderEffect(instance,dom,anchor){
         const componentUpdate = ()=>{
@@ -379,7 +387,15 @@ export function createRenderer(options){
         const instance = vnode.component = createComponentInstance(vnode,parent)
         // 2、组件的插槽 处理组件的属性 给组件的实例复制
         //这个地方处理属性和插槽
-        
+
+        //稍后渲染的时候用到的方法
+        instance.ctx.renderer = {
+            createElement:hostCreateElement,
+            move(vnode,container){
+                hostInsert(vnode.component.subTree.el,container)
+            },
+            unmount// 卸载
+        }
         setupComponent(instance)
         // 3、 给组件产生一个effect 这样可以组件变化后重新渲染
         setupRenderEffect(instance,dom,anchor)
@@ -413,7 +429,13 @@ export function createRenderer(options){
     function shouldComponentUpdate(preVnode,vnode){
         const preProps = preVnode.props
         const nextProps = vnode.props
-        return hasChange(preProps,nextProps) // 如果属性 变化 就要更新
+        if(hasChange(preProps,nextProps)){// 如果属性 变化 就要更新
+            return true
+        }
+        if(preVnode.children || vnode.children){
+            return true
+        }
+        return false
     }
     function updateComponent(preVnode,vnode){
         //拿到之前的属性 跟之后的属性是否有变化
@@ -436,7 +458,13 @@ export function createRenderer(options){
     function processComponent(preVnode,vnode,dom,anchor,parent){
         if(preVnode == null){
             // 初始化组件
-            mountComponent(vnode,dom,anchor,parent)
+            if(vnode.shapFlag & shapeFlags.COMPONENT_KEEP_ALIVE){
+                //当第一次component 卸载时 我需要将dom 移除到内存中
+                parent.ctx.activated(vnode,dom,anchor)
+            }else{
+                mountComponent(vnode,dom,anchor,parent)
+            }
+           
         }else{
             // 组件更新 插槽的更新
             updateComponent(preVnode,vnode)
@@ -445,7 +473,7 @@ export function createRenderer(options){
     function patch(preVnode,vnode,dom,anchor = null,parent = null){
         // 判断 标签名 跟key 如果一样 说明是同一个节点
         if(preVnode && !isSameVNode(preVnode,vnode)){
-            unmount(preVnode)
+            unmount(preVnode,parent)
             preVnode = null // 将preVnode置为 null 就会走vnode 的初始化
         }
         // 看preVnode 如果是null 说明之前没有 直接增加
@@ -474,7 +502,7 @@ export function createRenderer(options){
         if(vnode == null){
             //卸载元素
             if(container._vnode){
-                unmount(container._vnode)
+                unmount(container._vnode,null)
             }
 
         }else{
