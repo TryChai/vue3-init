@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- <script src="../../node_modules/@vue/reactivity/dist/reactivity.global.js"></script> -->
+    <script src="./reactivity.global.js"></script>
+    <div id="app"></div>
+    <div id="app2"></div>
+    <script>
+        // watch 虽然是一个compositionApi 但是没有放入响应式模块上
+        const {effect,reactive,effectScope,computed,watch,ref,toRef,toRefs,proxyRefs} = VueReactivity
+       
+        //pina 我们在组件加载的时候 想停止所有的依赖关系
+       const scope = effectScope() // 产生一个作用域 收集effect
+       scope.run(()=>{
+            const state = reactive({count:13})
+
+            effect(()=>{
+            app.innerHTML = state.count
+            })
+            setInterval(()=>{
+            state.count++
+            },1000)
+
+            const inner = effectScope(false)
+            inner.run(()=>{
+                const state = reactive({count:23})
+                effect(()=>{
+                    app2.innerHTML = state.count
+                })
+                setInterval(()=>{
+                    state.count++
+                },1000)
+            })
+       })
+    //    scope.run(()=>{
+    //         const state = reactive({count:23})
+
+    
+    //         effect(()=>{
+    //         app2.innerHTML = state.count
+    //         })
+    //         setInterval(()=>{
+    //         state.count++
+    //         },1000)
+    //    })
+       setTimeout(()=>{
+        scope.stop()
+       },1000)
+      
+       
+    </script>
+</body>
+</html>

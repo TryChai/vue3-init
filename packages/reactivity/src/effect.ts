@@ -1,3 +1,4 @@
+import { recordEffectScope } from './effectScope';
 
 export　let activeEffect = undefined
 function cleanEffect(effect){
@@ -10,12 +11,13 @@ function cleanEffect(effect){
     }
     effect.deps.length = 0
 }
+
 export class ReactiveEffect{
     public active = true
     public parent = null
     public deps = []
     constructor(public fn,public scheduler?){ // 传递的fn 放到this 上
-        
+        recordEffectScope(this)
     }
     run(){
         //依赖收集 让属性跟effect产生关联

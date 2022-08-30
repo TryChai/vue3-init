@@ -1182,13 +1182,31 @@ var VueRuntimeDOM = (() => {
   }
 
   // packages/runtime-core/src/keepAlive.ts
+  var resetFlag = (vnode) => {
+    if (vnode.shapFlag & 512 /* COMPONENT_KEEP_ALIVE */) {
+      vnode.shapFlag -= 512 /* COMPONENT_KEEP_ALIVE */;
+    }
+    if (vnode.shapFlag & 256 /* COMPONENT_SHOULD_KEEP_ALIVE */) {
+      vnode.shapFlag -= 256 /* COMPONENT_SHOULD_KEEP_ALIVE */;
+    }
+  };
   var KeepAlive = {
     __isKeepAlive: true,
+    props: {
+      max: {}
+    },
     setup(props, { slots }) {
-      const keys = /* @__PURE__ */ new Set();
-      const cache = /* @__PURE__ */ new Map();
       const instance2 = getCurrentInstance();
       let { createElement, move, unmount } = instance2.ctx.renderer;
+      const keys = /* @__PURE__ */ new Set();
+      const cache = /* @__PURE__ */ new Map();
+      const pruneCacheEntry = (vnode) => {
+        const subTree = cache.get(vnode);
+        unmount(subTree, subTree.component.parent);
+        resetFlag(subTree);
+        cache.delete(vnode);
+        keys.delete(vnode);
+      };
       let storageContainer = createElement("div");
       instance2.ctx.activated = (vnode, dom, anchor) => {
         move(vnode, dom, anchor);
@@ -1216,6 +1234,10 @@ var VueRuntimeDOM = (() => {
           vnode.shapFlag |= 512 /* COMPONENT_KEEP_ALIVE */;
         } else {
           keys.add(key);
+          let { max } = props;
+          if (max && keys.size > max) {
+            pruneCacheEntry(keys.values().next().value);
+          }
         }
         vnode.shapFlag |= 256 /* COMPONENT_SHOULD_KEEP_ALIVE */;
         return vnode;

@@ -20,16 +20,61 @@ var VueReactivity = (() => {
   // packages/reactivity/src/index.ts
   var src_exports = {};
   __export(src_exports, {
+    activeEffectScope: () => activeEffectScope,
     computed: () => computed,
     effect: () => effect,
+    effectScope: () => effectScope,
     proxyRefs: () => proxyRefs,
     reactive: () => reactive,
+    recordEffectScope: () => recordEffectScope,
     ref: () => ref,
     toReactive: () => toReactive,
     toRef: () => toRef,
     toRefs: () => toRefs,
     watch: () => watch
   });
+
+  // packages/reactivity/src/effectScope.ts
+  function recordEffectScope(effect3) {
+    if (activeEffectScope && activeEffectScope.active) {
+      activeEffectScope.effects.push(effect3);
+    }
+  }
+  var activeEffectScope;
+  var EffectScope = class {
+    constructor(detached) {
+      this.effects = [];
+      this.active = true;
+      this.scopes = [];
+      console.log(activeEffectScope);
+      if (!detached && activeEffectScope) {
+        activeEffectScope.scopes.push(this);
+      }
+    }
+    run(fn) {
+      if (this.active) {
+        try {
+          this.parent = activeEffectScope;
+          activeEffectScope = this;
+          return fn();
+        } finally {
+          activeEffectScope = this.parent;
+        }
+      }
+    }
+    stop() {
+      if (this.active) {
+        this.active = false;
+        this.effects.forEach((effect3) => effect3.stop());
+      }
+      if (this.scopes) {
+        this.scopes.forEach((scopesEffect) => scopesEffect.stop());
+      }
+    }
+  };
+  function effectScope(detached) {
+    return new EffectScope(detached);
+  }
 
   // packages/reactivity/src/effect.ts
   var activeEffect = void 0;
@@ -47,6 +92,7 @@ var VueReactivity = (() => {
       this.active = true;
       this.parent = null;
       this.deps = [];
+      recordEffectScope(this);
     }
     run() {
       if (!this.active) {
@@ -127,6 +173,7 @@ var VueReactivity = (() => {
   var isFunction = (value) => {
     return typeof value === "function";
   };
+  var isArray = Array.isArray;
 
   // packages/reactivity/src/reactive.ts
   var reactiveMap = /* @__PURE__ */ new WeakMap();

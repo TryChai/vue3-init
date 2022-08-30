@@ -32,26 +32,33 @@
             return h('a','a2')
         }
     }
+    const Component3 = {
+        name:'c3',
+        key:3,
+        render:()=>{
+            console.log('render3')
+            return h('a','a3')
+        }
+    }
    
-     render(h(KeepAlive,null,{
+     render(h(KeepAlive,{max:3},{
         default:()=>h(Component1,{key:1})
      }),app)
      setTimeout(()=>{
-        render(h(KeepAlive,null,{
+        render(h(KeepAlive,{max:3},{
             default:()=>h(Component2,{key:2})
         }),app)
      },1000)
      setTimeout(()=>{
-        render(h(KeepAlive,null,{
+        render(h(KeepAlive,{max:3},{
             default:()=>h(Component1,{key:1})
         }),app)
      },2000)
-     setTimeout(()=>{
-    
-        render(h(KeepAlive,null,{
-            default:()=>h(Component2,{key:2})
-        }),app)
-     },3000)
+    //  setTimeout(()=>{
+    //     render(h(KeepAlive,{max:3},{
+    //         default:()=>h(Component1,{key:1})
+    //     }),app)
+    //  },4000)
     </script>
 </body>
 </html>
