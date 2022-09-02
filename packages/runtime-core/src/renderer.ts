@@ -80,7 +80,7 @@ export function createRenderer(options){
             //child 可能是文本 把文本变成虚拟节点
 
 
-            patch(null,child,container,parent) //递归渲染子节点
+            patch(null,child,container,null,parent) //递归渲染子节点
         }
     }
     function patchProps(oldProps,newProps,el){

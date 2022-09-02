@@ -19,9 +19,11 @@
        // watch 如果监控的是一个对象 那么无法拿到新值和老值
        // vue3 中 watch 监控的是一个对象的时候 默认会深度监控
        //如果是监控某个属性值的话 需要写成函数
+       debugger
        watch(state,(newValue,oldValue)=>{
             console.log(newValue,oldValue,newValue === oldValue)
        })
+   
     //    watch(()=>state.age,(newValue,oldValue)=>{
     //         console.log(newValue,oldValue,newValue === oldValue)
     //    })

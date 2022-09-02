@@ -1,22 +1,8 @@
-var VueRuntimeDOM = (() => {
+var VueRuntimeCore = (() => {
   var __defProp = Object.defineProperty;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
   var __getOwnPropNames = Object.getOwnPropertyNames;
-  var __getOwnPropSymbols = Object.getOwnPropertySymbols;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
-  var __propIsEnum = Object.prototype.propertyIsEnumerable;
-  var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-  var __spreadValues = (a, b) => {
-    for (var prop in b || (b = {}))
-      if (__hasOwnProp.call(b, prop))
-        __defNormalProp(a, prop, b[prop]);
-    if (__getOwnPropSymbols)
-      for (var prop of __getOwnPropSymbols(b)) {
-        if (__propIsEnum.call(b, prop))
-          __defNormalProp(a, prop, b[prop]);
-      }
-    return a;
-  };
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
@@ -31,7 +17,7 @@ var VueRuntimeDOM = (() => {
   };
   var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-  // packages/runtime-dom/src/index.ts
+  // packages/runtime-core/src/index.ts
   var src_exports = {};
   __export(src_exports, {
     Fragement: () => Fragement,
@@ -59,121 +45,12 @@ var VueRuntimeDOM = (() => {
     reactive: () => reactive,
     recordEffectScope: () => recordEffectScope,
     ref: () => ref,
-    render: () => render,
     shapeFlags: () => shapeFlags,
     toReactive: () => toReactive,
     toRef: () => toRef,
     toRefs: () => toRefs,
     watch: () => watch
   });
-
-  // packages/runtime-dom/src/nodeOps.ts
-  var nodeOps = {
-    createElement(tagName) {
-      return document.createElement(tagName);
-    },
-    createTextNode(text) {
-      return document.createTextNode(text);
-    },
-    insert(element, container, anchor = null) {
-      container.insertBefore(element, anchor);
-    },
-    remove(child) {
-      const parent = child.parentNode;
-      if (parent) {
-        parent.removeChild(child);
-      }
-    },
-    querySelector(selectors) {
-      return document.querySelector(selectors);
-    },
-    parentNode(child) {
-      return child.parentNode;
-    },
-    nextSibling(child) {
-      return child.nextSibling;
-    },
-    setText(element, text) {
-      element.nodeValue = text;
-    },
-    setElementText(element, text) {
-      element.textContent = text;
-    }
-  };
-
-  // packages/runtime-dom/src/patch-prop/pacthEvent.ts
-  function createInvoker(preValue) {
-    const invoker = (e) => {
-      invoker.value(e);
-    };
-    invoker.value = preValue;
-    return invoker;
-  }
-  function patchEvent(el, eventName, nextValue) {
-    const invokers = el._vei || (el._vei = {});
-    const exitingInvoker = invokers[eventName];
-    if (exitingInvoker && nextValue) {
-      exitingInvoker.value = nextValue;
-    } else {
-      const eName = eventName.slice(2).toLowerCase();
-      if (nextValue) {
-        const invoker = createInvoker(nextValue);
-        invokers[eventName] = invoker;
-        el.addEventListener(eName, invoker);
-      } else if (exitingInvoker) {
-        el.removgeEventListener(eName, exitingInvoker);
-        invokers[eventName] = null;
-      }
-    }
-  }
-
-  // packages/runtime-dom/src/patch-prop/patchAttr.ts
-  function patchAttr(el, key, nextValue) {
-    if (nextValue == null) {
-      el.removeAttribute(key);
-    } else {
-      el.setAttribute(key, nextValue);
-    }
-  }
-
-  // packages/runtime-dom/src/patch-prop/patchClass.ts
-  function patchClass(el, nextValue) {
-    if (nextValue == null) {
-      el.removeAttribute("class");
-    } else {
-      el.className = nextValue;
-    }
-  }
-
-  // packages/runtime-dom/src/patch-prop/patchStyle.ts
-  function patchStyle(el, preValue, nextValue) {
-    preValue = preValue ? preValue : {};
-    nextValue = nextValue ? nextValue : {};
-    const style = el.style;
-    for (let key in nextValue) {
-      style[key] = nextValue[key];
-    }
-    if (preValue) {
-      for (let key in preValue) {
-        if (nextValue[key] == null) {
-          style[key] = null;
-        }
-      }
-    }
-  }
-
-  // packages/runtime-dom/src/patchProp.ts
-  var patchProp = (el, key, preValue, nextValue) => {
-    if (key === "class") {
-      patchClass(el, nextValue);
-    } else if (key === "style") {
-      patchStyle(el, preValue, nextValue);
-    } else if (/on[^a-z]/g.test(key)) {
-      patchEvent(el, key, nextValue);
-    } else {
-      patchAttr(el, key, nextValue);
-    }
-  };
 
   // packages/shared/src/index.ts
   var isObject = (value) => {
@@ -686,7 +563,7 @@ var VueRuntimeDOM = (() => {
   }
   function setupComponent(instance2) {
     let { type, props, children } = instance2.vnode;
-    let { data, render: render2, setup } = type;
+    let { data, render, setup } = type;
     initProps(instance2, props);
     initSlots(instance2, children);
     instance2.proxy = new Proxy(instance2, instanceProxy);
@@ -719,8 +596,8 @@ var VueRuntimeDOM = (() => {
       }
     }
     if (!instance2.render) {
-      if (render2) {
-        instance2.render = render2;
+      if (render) {
+        instance2.render = render;
       } else {
       }
     }
@@ -980,13 +857,13 @@ var VueRuntimeDOM = (() => {
     }
     function setupRenderEffect(instance2, dom, anchor) {
       const componentUpdate = () => {
-        const { render: render3, data, proxy } = instance2;
+        const { render: render2, data, proxy } = instance2;
         if (!instance2.isMounted) {
           const { bm, m } = instance2;
           if (bm) {
             invokerFns(bm);
           }
-          const subTree = render3.call(proxy);
+          const subTree = render2.call(proxy);
           patch(null, subTree, dom, anchor, instance2);
           instance2.subTree = subTree;
           instance2.isMounted = true;
@@ -998,7 +875,7 @@ var VueRuntimeDOM = (() => {
           if (next) {
             updateComponentPreRender(instance2, next);
           }
-          const subTree = render3.call(proxy);
+          const subTree = render2.call(proxy);
           patch(instance2.subTree, subTree, dom, anchor, instance2);
           if (instance2.u) {
             invokerFns(instance2.u);
@@ -1094,7 +971,7 @@ var VueRuntimeDOM = (() => {
           }
       }
     }
-    function render2(vnode, container) {
+    function render(vnode, container) {
       if (vnode == null) {
         if (container._vnode) {
           unmount(container._vnode, null);
@@ -1105,7 +982,7 @@ var VueRuntimeDOM = (() => {
       container._vnode = vnode;
     }
     return {
-      render: render2
+      render
     };
   }
 
@@ -1116,7 +993,7 @@ var VueRuntimeDOM = (() => {
     LifeCycle2["UPDATED"] = "u";
     return LifeCycle2;
   })(LifeCycle || {});
-  function createInvoker2(type) {
+  function createInvoker(type) {
     return function(hook, currentInstance = instance) {
       if (currentInstance) {
         const lifeCycles = currentInstance[type] || (currentInstance[type] = []);
@@ -1129,9 +1006,9 @@ var VueRuntimeDOM = (() => {
       }
     };
   }
-  var onBeforeMount = createInvoker2("bm" /* BEFORE_MOUNT */);
-  var onMounted = createInvoker2("m" /* MOUNTED */);
-  var onUpdated = createInvoker2("u" /* UPDATED */);
+  var onBeforeMount = createInvoker("bm" /* BEFORE_MOUNT */);
+  var onMounted = createInvoker("m" /* MOUNTED */);
+  var onUpdated = createInvoker("u" /* UPDATED */);
 
   // packages/runtime-core/src/apiInject.ts
   function provide(key, value) {
@@ -1199,7 +1076,7 @@ var VueRuntimeDOM = (() => {
                 onError(retry, fail);
               });
             } else {
-              throw new Error();
+              throw Error();
             }
           });
         }
@@ -1290,15 +1167,6 @@ var VueRuntimeDOM = (() => {
       };
     }
   };
-
-  // packages/runtime-dom/src/index.ts
-  var renderOptions = __spreadValues({
-    patchProp
-  }, nodeOps);
-  function render(vnode, container) {
-    let { render: render2 } = createRenderer(renderOptions);
-    render2(vnode, container);
-  }
   return __toCommonJS(src_exports);
 })();
-//# sourceMappingURL=runtime-dom.global.js.map
+//# sourceMappingURL=runtime-core.global.js.map

@@ -1,8 +1,8 @@
 
-export * from './createVNode.ts'
+export * from './createVNode'
 
 export * from '@vue/reactivity'
-export * from './h.ts'
+export * from './h'
 
 export * from './scheduler'
 export {createRenderer} from './renderer'

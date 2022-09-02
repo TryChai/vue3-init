@@ -22,7 +22,7 @@
         const runner = effect(()=>{
             // state.age = Math.random() // 死循环 如何解决
             console.log('runner')
-            app.innerHTML = state.address.num
+            app.innerHTML = state.address.num + state.age
         },{
             scheduler(){ //自己实行一个批处理 多次修改 一次更新
                 if(!waiting) {
@@ -37,10 +37,10 @@
         // console.log(runner)
         // runner.effect.stop()
         setTimeout(()=>{
-            // state.age++
-            // state.age++
-            // state.age++
-            // state.age++
+            state.age++
+            state.age++
+            state.age++
+            state.age++
             state.address.num = 200
             // runner()
         },1000)

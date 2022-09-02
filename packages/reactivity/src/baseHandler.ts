@@ -1,4 +1,3 @@
-import { triggerRef } from 'vue';
 import { track, trigger } from './effect';
 import { isObject } from '../../shared/src/index';
 import { reactive } from './reactive';

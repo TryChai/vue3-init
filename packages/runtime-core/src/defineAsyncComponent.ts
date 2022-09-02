@@ -42,7 +42,7 @@ export function defineAsyncComponent(loaderOptions){
                             onError(retry,fail)
                         })
                     }else{
-                        throw Error()
+                        throw new Error()
                     }
                 })
             }
